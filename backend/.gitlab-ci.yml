@@ -12,9 +12,9 @@ backend-build-artifacts:
     - cd backend
     - go test -v ./..
     - go build ./cmd/api
-    - mv ./api ./backend-pelmeni-store-${$APP_VERSION}
+    - mv ./api ./backend-pelmeni-store-${APP_VERSION}
   artifacts:
     untracked: false
     expire_in: "7 days"
     paths:
-      - "{CI_PROJECT_DIR}/backend/backend-pelmeni-store-${$APP_VERSION}"
+      - ${CI_PROJECT_DIR}/backend/backend-pelmeni-store-${APP_VERSION}

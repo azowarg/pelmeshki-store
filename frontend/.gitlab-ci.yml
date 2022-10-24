@@ -14,10 +14,10 @@ frontend-build-artifacts:
       - cd frontend
       - npm ci --cache ${NPM_CACHE_PATH} --prefer-offline
       - npm run build
-      - mkdir frontend-pelmeni-store-{$APP_VERSION}
-      - mv dist frontend-pelmeni-store-{$APP_VERSION}/public_html
+      - mkdir frontend-pelmeni-store-${APP_VERSION}
+      - mv dist frontend-pelmeni-store-${APP_VERSION}/public_html
   artifacts:
     untracked: false
     expire_in: "7 days"
     paths:
-      - "{CI_PROJECT_DIR}/frontend/frontend-pelmeni-store-$$APP_VERSION}/public_html"
+      - ${CI_PROJECT_DIR}/frontend/frontend-pelmeni-store-${APP_VERSION}/public_html
