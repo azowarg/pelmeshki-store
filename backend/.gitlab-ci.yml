@@ -1,7 +1,5 @@
 stages:
   - build
-  - test
-  - deploy
 
 backend-build-artifacts:
   stage: build
@@ -11,32 +9,12 @@ backend-build-artifacts:
     paths:
       - ${GOLANG_CACHE_PATH}
   script:
-    - echo ${GOLANG_CACHE_PATH}
     - cd backend
     - go test -v ./..
     - go build ./cmd/api
-    - mv ./api ./backend-pelmeni-store-${VERSION}
+    - mv ./api ./backend-pelmeni-store-${$APP_VERSION}
   artifacts:
     untracked: false
     expire_in: "7 days"
     paths:
-      - "{CI_PROJECT_DIR}/backend/backend-pelmeni-store-${VERSION}"
-
-frontend-build-artifacts:
-  stage: build
-  cache:
-    key: nodejs
-    paths:
-      - ${NODE_CACHE_PATH}
-      - ${NPM_CACHE_PATH}
-  script:
-      - cd frontend
-      - npm ci --cache ${NPM_CACHE_PATH} --prefer-offline
-      - npm run build
-      - mkdir frontend-pelmeni-store-{$VERSION}
-      - mv dist frontend-pelmeni-store-{$VERSION}/public_html
-  artifacts:
-    untracked: false
-    expire_in: "7 days"
-    paths:
-      - "{CI_PROJECT_DIR}/frontend/frontend-pelmeni-store-${VERSION}/public_html"
+      - "{CI_PROJECT_DIR}/backend/backend-pelmeni-store-${$APP_VERSION}"

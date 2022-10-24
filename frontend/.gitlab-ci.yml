@@ -3,8 +3,21 @@ stages:
   - test
   - deploy
 
-backend-build-artifacts:
+frontend-build-artifacts:
   stage: build
-  image: golang
+  cache:
+    key: nodejs
+    paths:
+      - ${NODE_CACHE_PATH}
+      - ${NPM_CACHE_PATH}
   script:
-    - pwd
+      - cd frontend
+      - npm ci --cache ${NPM_CACHE_PATH} --prefer-offline
+      - npm run build
+      - mkdir frontend-pelmeni-store-{$APP_VERSION}
+      - mv dist frontend-pelmeni-store-{$APP_VERSION}/public_html
+  artifacts:
+    untracked: false
+    expire_in: "7 days"
+    paths:
+      - "{CI_PROJECT_DIR}/frontend/frontend-pelmeni-store-$$APP_VERSION}/public_html"

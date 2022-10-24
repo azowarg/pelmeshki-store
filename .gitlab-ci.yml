@@ -7,7 +7,7 @@ frontend:
     include:
       - "/frontend/.gitlab-ci.yml"
     strategy: depend
-  only:
+  #only:
     #changes:
     #  - frontend/**/*
 
@@ -17,6 +17,6 @@ backend:
     include:
       - "/backend/.gitlab-ci.yml"
     strategy: depend
-  only:
+  #only:
     # changes:
     #   - backend/**/*
