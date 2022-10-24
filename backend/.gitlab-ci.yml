@@ -18,3 +18,25 @@ backend-build-artifacts:
     expire_in: "7 days"
     paths:
       - ${CI_PROJECT_DIR}/backend/backend-pelmeni-store-${APP_VERSION}
+
+
+backend-build-docker-image:
+  stage: build
+  cache:
+    key: golang-backend
+    paths:
+      - ${GOLANG_CACHE_PATH}
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  script:
+    - cp ${GOLANG_CACHE_PATH} backend/.cache -r
+    - mkdir -p /kaniko/.docker
+    - echo "{\"auths\":{\"${CI_REGISTRY}\":{\"auth\":\"$(printf "%s:%s" "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
+    - >
+      /kaniko/executor
+      --use-new-run
+      --snapshotMode=redo
+      --cache=true
+      --context "${CI_PROJECT_DIR}/backend"
+      --dockerfile "${CI_PROJECT_DIR}/backend/Dockerfile"
