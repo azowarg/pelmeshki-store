@@ -10,7 +10,7 @@ backend-build-artifacts:
       - ${GOLANG_CACHE_PATH}
   script:
     - cd backend
-    - go test -v ./..
+    - go test -v ./...
     - go build ./cmd/api
     - mv ./api ./backend-pelmeni-store-${APP_VERSION}
   artifacts:
