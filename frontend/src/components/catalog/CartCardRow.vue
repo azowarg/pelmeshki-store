@@ -1,5 +1,5 @@
 <template>
-  <li 
+  <li
     class="list-group-item d-flex justify-content-between align-items-center"
     @mouseenter="hovering = true"
     @mouseleave="hovering = false"

@@ -18,13 +18,13 @@
           <CartIcon class="d-none d-sm-block" />
 
         </div>
-        
+
       </div>
 
       <CartIcon class="d-block d-sm-none ms-3" />
 
     </div>
-  </nav>  
+  </nav>
 </template>
 
 <script lang="ts">

@@ -31,7 +31,7 @@ const store: Store<State> = createStore({
     cart,
     auth: {
       checked: false,
-      isLoggedIn: false, 
+      isLoggedIn: false,
     }
   } as State,
   getters: {
@@ -55,7 +55,7 @@ const store: Store<State> = createStore({
   },
   mutations: {
     addToCart(state, product: ProductModel) {
-      
+
       if(state.cart[getIdString(product)]) {
         state.cart[getIdString(product)].quantity++;
       } else {
@@ -81,7 +81,7 @@ const store: Store<State> = createStore({
   },
   actions: {
     async checkAuth({ commit }) {
-      
+
       const user = await ApiService.get('/auth/whoami/').catch((error: AxiosError) => {
         if(error.response && error.response.status === 403) return null
       });
@@ -106,7 +106,7 @@ const store: Store<State> = createStore({
       });
     },
     changePassword({ commit }, credentials: {old_password: string, new_password: string}) {
-      return ApiService.post('/auth/change-password/', credentials).then((data: any) => { 
+      return ApiService.post('/auth/change-password/', credentials).then((data: any) => {
         commit('setAuthLoggedIn', false);
         commit('setAuthUser', null);
         ApiService.csrf_token = '';

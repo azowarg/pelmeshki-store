@@ -2,9 +2,9 @@
   <tr>
     <td>{{ cartItem.product.name }}</td>
     <td>
-      <input 
-        type="number" 
-        class="form-control" 
+      <input
+        type="number"
+        class="form-control"
         v-model="cartItem.quantity"
         min="0"
       />

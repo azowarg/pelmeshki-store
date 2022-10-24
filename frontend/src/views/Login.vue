@@ -7,7 +7,7 @@
 
     <Center>
 
-      <Spinner 
+      <Spinner
         v-if="loading"
         size="8rem"
         thickness="1.25rem"
@@ -69,7 +69,7 @@ export default defineComponent({
     }
   },
   created() {
-    
+
     if(this.$store.state.auth.isLoggedIn) {
       return this.$router.push('/profile');
     }

@@ -1,0 +1,10 @@
+stages:
+  - build
+  - test
+  - deploy
+
+backend-build-artifacts:
+  stage: build
+  image: golang
+  script:
+    - pwd

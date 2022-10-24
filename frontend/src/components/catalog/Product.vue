@@ -25,7 +25,7 @@
     methods: {
       addToCart() {
         this.$store.commit('addToCart', this.product);
-      }  
+      }
     }
   });
 

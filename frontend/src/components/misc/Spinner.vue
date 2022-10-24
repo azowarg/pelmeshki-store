@@ -1,12 +1,12 @@
 <template>
-  <div 
-    class="spinner-border" 
+  <div
+    class="spinner-border"
     role="status"
-    :style="{ 
-      'width': size, 
-      'height': size, 
-      'font-size': thickness, 
-      'color': color 
+    :style="{
+      'width': size,
+      'height': size,
+      'font-size': thickness,
+      'color': color
     }"
   >
     <span class="visually-hidden">Loading...</span>

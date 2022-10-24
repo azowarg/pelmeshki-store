@@ -18,4 +18,4 @@ vendor/
 .DS_Store
 
 # pre-commit files
-.pre-commit.config.yaml
+.pre-commit-config.yaml

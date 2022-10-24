@@ -6,37 +6,37 @@
 
   <form v-else @submit.prevent="handleSubmit" class="my-3">
     <div class="mb-2">
-      <input 
-        type="password" 
-        v-model="oldPassword" 
-        class="form-control" 
-        placeholder="Old Password" 
+      <input
+        type="password"
+        v-model="oldPassword"
+        class="form-control"
+        placeholder="Old Password"
         :disabled="loading"
         required
       />
     </div>
     <div class="mb-2">
-      <input 
-        type="password" 
-        v-model="password" 
-        class="form-control" 
-        placeholder="New password" 
-        ref="password" 
+      <input
+        type="password"
+        v-model="password"
+        class="form-control"
+        placeholder="New password"
+        ref="password"
         @input="handlePasswordInput"
         :disabled="loading"
-        required 
+        required
       />
     </div>
     <div class="mb-2">
-      <input 
-        type="password" 
-        v-model="passwordConfirmation" 
-        class="form-control" 
-        placeholder="Confirm the new password" 
-        ref="passwordConfirmation" 
+      <input
+        type="password"
+        v-model="passwordConfirmation"
+        class="form-control"
+        placeholder="Confirm the new password"
+        ref="passwordConfirmation"
         @input="handlePasswordInput"
         :disabled="loading"
-        required 
+        required
       />
     </div>
     <div class="d-flex justify-content-end">
@@ -44,13 +44,13 @@
         <Spinner size="2rem" thickness="0.75rem" />
       </Center>
       <button
-        type="button" 
-        class="btn btn-secondary me-3" 
+        type="button"
+        class="btn btn-secondary me-3"
         @click="$emit('close')"
         :disabled="loading"
       >Cancel</button>
-      <button 
-        type="submit" 
+      <button
+        type="submit"
         class="btn btn-primary"
         :disabled="loading"
       >Change password</button>
