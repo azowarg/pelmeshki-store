@@ -26,7 +26,7 @@ frontend-build-artifacts:
 frontend-build-docker-image:
   stage: build
   cache:
-    key: golang-backend
+    key: nodejs
     paths:
       - ${NODE_CACHE_PATH}
       - ${NPM_CACHE_PATH}
