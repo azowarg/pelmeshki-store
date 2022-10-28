@@ -1,28 +1,35 @@
 stages:
   - build
+  - test
+
+variables:
+  APP_PART: backend
+
+include:
+  - template: Security/SAST.gitlab-ci.yml
 
 backend-build-artifacts:
   stage: build
   image: golang
   cache:
-    key: golang-backend
+    key: golang
     paths:
       - ${GOCACHE}
   script:
-    - cd backend
+    - cd ${APP_PART}
     - go test -v ./...
     - go build ./cmd/api
-    - mv ./api ./${APP_NAME}-backend-${APP_VERSION}
+    - mv ./api ./${APP_NAME}-${APP_PART}-${APP_VERSION}
   artifacts:
     untracked: false
     expire_in: "7 days"
     paths:
-      - ${CI_PROJECT_DIR}/backend/${APP_NAME}-backend-${APP_VERSION}
+      - ${CI_PROJECT_DIR}/${APP_PART}/${APP_NAME}-${APP_PART}-${APP_VERSION}
 
 backend-build-docker-image:
   stage: build
   cache:
-    key: golang-backend
+    key: golang-${APP_PART}
     paths:
       - ${GOCACHE}
   image:
@@ -36,6 +43,27 @@ backend-build-docker-image:
       --build-arg GOCACHE=${GOCACHE}
       --use-new-run
       --cache=true
-      --context "${CI_PROJECT_DIR}/backend"
-      --dockerfile "${CI_PROJECT_DIR}/backend/Dockerfile"
-      --destination "${CI_REGISTRY_IMAGE}/${APP_NAME}-backend:${CI_PIPELINE_ID}"
+      --context "${CI_PROJECT_DIR}/${APP_PART}"
+      --dockerfile "${CI_PROJECT_DIR}/${APP_PART}/Dockerfile"
+      --destination "${CI_REGISTRY_IMAGE}/${APP_NAME}-${APP_PART}:${CI_PIPELINE_ID}"
+
+
+sonarqube-backend-sast:
+  stage: test
+  image:
+    name: sonarsource/sonar-scanner-cli:latest
+  variables:
+    sonar_user_home: ${SONARQUBE_CACHE}
+  cache:
+    key: nodejs
+    paths:
+      - ${SONARQUBE_CACHE_SCANNERWORK}
+      - ${SONARQUBE_CACHE}
+  script:
+    - cd ${APP_PART}
+    - >
+      sonar-scanner -Dsonar.qualitygate.wait=true
+      -Dsonar.projectKey=${SONARQUBE_TOKEN_NAME}
+      -Dsonar.host.url=${SONARQUBE_URL}
+      -Dsonar.login=${SONARQUBE_TOKEN}
+      -Dsonar.projectName=YANBODRIEVSKIY_${APP_NAME}_${APP_PART}

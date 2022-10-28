@@ -3,24 +3,29 @@ stages:
   - test
   - deploy
 
+variables:
+  APP_PART: frontend
+
+include:
+  - template: Security/SAST.gitlab-ci.yml
+
 frontend-build-artifacts:
-  stage: build
   cache:
-    key: nodejs
+    key: nodejsVJj
     paths:
       - ${NODE_CACHE_PATH}
       - ${NPM_CACHE_PATH}
   script:
-      - cd frontend
+      - cd ${APP_PART}
       - npm ci --cache ${NPM_CACHE_PATH} --prefer-offline
       - npm run build
-      - mkdir ${APP_NAME}-frontend-${APP_VERSION}
-      - mv dist ${APP_NAME}-frontend-${APP_VERSION}/public_html
+      - mkdir ${APP_NAME}-${APP_PART}-${APP_VERSION}
+      - mv dist ${APP_NAME}-${APP_PART}-${APP_VERSION}/public_html
   artifacts:
     untracked: false
     expire_in: "7 days"
     paths:
-      - ${CI_PROJECT_DIR}/frontend/${APP_NAME}-frontend-${APP_VERSION}/public_html
+      - ${CI_PROJECT_DIR}/${APP_PART}/${APP_NAME}-${APP_PART}-${APP_VERSION}/public_html
 
 
 frontend-build-docker-image:
@@ -35,8 +40,8 @@ frontend-build-docker-image:
     entrypoint: [""]
   script:
     - ls -la ${CI_PROJECT_DIR}
-    - ls -la ${CI_PROJECT_DIR}/frontend
-    - cp ${NPM_CACHE_PATH} frontend/ -r
+    - ls -la ${CI_PROJECT_DIR}/${APP_PART}
+    - cp ${NPM_CACHE_PATH} ${APP_PART}/ -r
     - mkdir -p /kaniko/.docker
     - echo "{\"auths\":{\"${CI_REGISTRY}\":{\"auth\":\"$(printf "%s:%s" "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
     - >
@@ -44,6 +49,26 @@ frontend-build-docker-image:
       --use-new-run
       --snapshotMode=redo
       --cache=true
-      --context "${CI_PROJECT_DIR}/frontend"
-      --dockerfile "${CI_PROJECT_DIR}/frontend/Dockerfile"
-      --destination "${CI_REGISTRY_IMAGE}/${APP_NAME}-frontend:${CI_PIPELINE_ID}"
+      --context "${CI_PROJECT_DIR}/${APP_PART}"
+      --dockerfile "${CI_PROJECT_DIR}/${APP_PART}/Dockerfile"
+      --destination "${CI_REGISTRY_IMAGE}/${APP_NAME}-${APP_PART}:${CI_PIPELINE_ID}"
+
+sonarqube-frontend-sast:
+  stage: test
+  image:
+    name: sonarsource/sonar-scanner-cli:latest
+  variables:
+    sonar_user_home: ${SONARQUBE_CACHE}
+  cache:
+    key: nodejs
+    paths:
+      - ${SONARQUBE_CACHE_SCANNERWORK}
+      - ${SONARQUBE_CACHE}
+  script:
+    - cd ${APP_PART}
+    - >
+      sonar-scanner -Dsonar.qualitygate.wait=true
+      -Dsonar.projectKey=${SONARQUBE_TOKEN_NAME}
+      -Dsonar.host.url=${SONARQUBE_URL}
+      -Dsonar.login=${SONARQUBE_TOKEN}
+      -Dsonar.projectName=YANBODRIEVSKIY_${APP_NAME}_${APP_PART}
