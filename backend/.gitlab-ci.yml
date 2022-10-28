@@ -30,8 +30,6 @@ backend-build-docker-image:
     name: gcr.io/kaniko-project/executor:debug
     entrypoint: [""]
   script:
-    - ls -la ${CI_PROJECT_DIR}
-    - cp ${GOCACHE} backend/ -r
     - mkdir -p /kaniko/.docker
     - echo "{\"auths\":{\"${CI_REGISTRY}\":{\"auth\":\"$(printf "%s:%s" "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
     - >
@@ -40,3 +38,4 @@ backend-build-docker-image:
       --cache=true
       --context "${CI_PROJECT_DIR}/backend"
       --dockerfile "${CI_PROJECT_DIR}/backend/Dockerfile"
+      --destination "${CI_REGISTRY_IMAGE}/pelmeni-backend:${CI_PIPELINE_ID}
