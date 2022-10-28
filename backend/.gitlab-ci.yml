@@ -12,13 +12,12 @@ backend-build-artifacts:
     - cd backend
     - go test -v ./...
     - go build ./cmd/api
-    - mv ./api ./backend-pelmeni-store-${APP_VERSION}
+    - mv ./api ./${APP_NAME}-backend-${APP_VERSION}
   artifacts:
     untracked: false
     expire_in: "7 days"
     paths:
-      - ${CI_PROJECT_DIR}/backend/backend-pelmeni-store-${APP_VERSION}
-
+      - ${CI_PROJECT_DIR}/backend/${APP_NAME}-backend-${APP_VERSION}
 
 backend-build-docker-image:
   stage: build
@@ -38,4 +37,4 @@ backend-build-docker-image:
       --cache=true
       --context "${CI_PROJECT_DIR}/backend"
       --dockerfile "${CI_PROJECT_DIR}/backend/Dockerfile"
-      --destination "${CI_REGISTRY_IMAGE}/pelmeni-backend:${CI_PIPELINE_ID}"
+      --destination "${CI_REGISTRY_IMAGE}/${APP_NAME}-backend:${CI_PIPELINE_ID}"
