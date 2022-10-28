@@ -1,6 +1,6 @@
 #Build
 FROM golang:latest as builder
-ENV GOCACHE=".cache"
+ARG GOCACHE
 WORKDIR /usr/src/app
 COPY . .
 RUN go test ./...  \

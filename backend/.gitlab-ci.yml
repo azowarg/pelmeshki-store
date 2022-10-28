@@ -33,6 +33,7 @@ backend-build-docker-image:
     - echo "{\"auths\":{\"${CI_REGISTRY}\":{\"auth\":\"$(printf "%s:%s" "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
     - >
       /kaniko/executor
+      --build-arg GOCACHE=${GOCACHE}
       --use-new-run
       --cache=true
       --context "${CI_PROJECT_DIR}/backend"
