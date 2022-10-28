@@ -4,14 +4,16 @@ stages:
   - deploy
 
 variables:
+  SAST_EXCLUDED_ANALYZERS: "gosec"
   APP_PART: frontend
 
 include:
   - template: Security/SAST.gitlab-ci.yml
 
 frontend-build-artifacts:
+  stage: build
   cache:
-    key: nodejsVJj
+    key: nodejs
     paths:
       - ${NODE_CACHE_PATH}
       - ${NPM_CACHE_PATH}

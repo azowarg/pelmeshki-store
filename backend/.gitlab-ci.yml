@@ -3,6 +3,7 @@ stages:
   - test
 
 variables:
+  SAST_EXCLUDED_ANALYZERS: "nodejs-scan"
   APP_PART: backend
 
 include:
@@ -47,6 +48,10 @@ backend-build-docker-image:
       --dockerfile "${CI_PROJECT_DIR}/${APP_PART}/Dockerfile"
       --destination "${CI_REGISTRY_IMAGE}/${APP_NAME}-${APP_PART}:${CI_PIPELINE_ID}"
 
+gosec-sast:
+  stage: test
+  script:
+    - /analyzer run  --target-dir ${CI_PROJECT_DIR}/${APP_PART}/ --artifact-dir ${CI_PROJECT_DIR}/${APP_PART}/
 
 sonarqube-backend-sast:
   stage: test
