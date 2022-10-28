@@ -46,4 +46,4 @@ frontend-build-docker-image:
       --cache=true
       --context "${CI_PROJECT_DIR}/frontend"
       --dockerfile "${CI_PROJECT_DIR}/frontend/Dockerfile"
-      --destination "${CI_REGISTRY_IMAGE}/pelmeni-frontend:${CI_PIPELINE_ID}"}"
+      --destination "${CI_REGISTRY_IMAGE}/pelmeni-frontend:${CI_PIPELINE_ID}"

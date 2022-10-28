@@ -38,4 +38,4 @@ backend-build-docker-image:
       --cache=true
       --context "${CI_PROJECT_DIR}/backend"
       --dockerfile "${CI_PROJECT_DIR}/backend/Dockerfile"
-      --destination "${CI_REGISTRY_IMAGE}/pelmeni-backend:${CI_PIPELINE_ID}
+      --destination "${CI_REGISTRY_IMAGE}/pelmeni-backend:${CI_PIPELINE_ID}"
