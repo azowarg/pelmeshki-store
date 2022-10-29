@@ -1,6 +1,7 @@
 stages:
   - build
   - test
+  - release
 
 variables:
   SAST_EXCLUDED_ANALYZERS: "nodejs-scan"
@@ -8,6 +9,8 @@ variables:
 
 include:
   - template: Security/SAST.gitlab-ci.yml
+  - project: 'templates/ci'
+    file: 'DockerInDockerTemplate.yml'
 
 backend-build-artifacts:
   stage: build
@@ -46,24 +49,26 @@ backend-build-docker-image:
       --cache=true
       --context "${CI_PROJECT_DIR}/${APP_PART}"
       --dockerfile "${CI_PROJECT_DIR}/${APP_PART}/Dockerfile"
-      --destination "${CI_REGISTRY_IMAGE}/${APP_NAME}-${APP_PART}:${CI_PIPELINE_ID}"
+      --destination "${CI_REGISTRY_IMAGE}/${APP_NAME}-${APP_PART}:${APP_VERSION}"
 
 gosec-sast:
   stage: test
   script:
     - /analyzer run  --target-dir ${CI_PROJECT_DIR}/${APP_PART}/ --artifact-dir ${CI_PROJECT_DIR}/${APP_PART}/
 
-sonarqube-backend-sast:
+backend-sonarqube-sast:
+  dependencies: []
   stage: test
   image:
     name: sonarsource/sonar-scanner-cli:latest
-  variables:
-    sonar_user_home: ${SONARQUBE_CACHE}
   cache:
-    key: nodejs
+    key: golang-sonar
     paths:
       - ${SONARQUBE_CACHE_SCANNERWORK}
-      - ${SONARQUBE_CACHE}
+      - ${SONARQUBE_CACHE_GITLAB}
+  before_script:
+    - mkdir ${SONARQUBE_CACHE_GITLAB} || true
+    - cp -r ${SONARQUBE_CACHE_GITLAB} ${SONARQUBE_CACHE} || true
   script:
     - cd ${APP_PART}
     - >
@@ -71,4 +76,27 @@ sonarqube-backend-sast:
       -Dsonar.projectKey=${SONARQUBE_TOKEN_NAME}
       -Dsonar.host.url=${SONARQUBE_URL}
       -Dsonar.login=${SONARQUBE_TOKEN}
-      -Dsonar.projectName=YANBODRIEVSKIY_${APP_NAME}_${APP_PART}
+      -Dsonar.projectName=YANBODRIEVSKIY_${APP_NAME^^}_${APP_PART^^}
+      -Dsonar.user.home=${SONARQUBE_CACHE}
+    - cp -r ${SONARQUBE_CACHE}/* ${SONARQUBE_CACHE_GITLAB}
+
+backend-upload-artifacts:
+  variables:
+    GIT_STRATEGY: none
+  stage: release
+  script:
+    - tar czvf ${APP_NAME}-${APP_PART}-${APP_VERSION}.tar.gz ${CI_PROJECT_DIR}/${APP_PART}/${APP_NAME}-${APP_PART}-${APP_VERSION}
+    - curl  -u "${NEXUS_REPO_USER}:$(echo ${NEXUS_REPO_PASS} | base64 -d)" --upload-file ${APP_NAME}-${APP_PART}-${APP_VERSION}.tar.gz ${NEXUS_REPO_URL}-${APP_NAME}-${APP_PART}/${APP_NAME}/${APP_PART}/${APP_VERSION}/${APP_NAME}-${APP_PART}-${APP_VERSION}.tar.gz
+
+backend-upload-docker-images:
+  variables:
+    GIT_STRATEGY: none
+  image: docker:20.10.12-dind-rootless
+  stage: release
+  before_script:
+    - until docker info; do sleep 1; done
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - docker pull $CI_REGISTRY_IMAGE/${APP_NAME}-${APP_PART}:${APP_VERSION}
+    - docker tag $CI_REGISTRY_IMAGE/${APP_NAME}-${APP_PART}:${APP_VERSION} $CI_REGISTRY_IMAGE/${APP_NAME}-${APP_PART}:latest
+    - docker push $CI_REGISTRY_IMAGE/${APP_NAME}-${APP_PART}:latest
