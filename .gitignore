@@ -19,3 +19,11 @@ vendor/
 
 # pre-commit files
 .pre-commit-config.yaml
+
+# terraform secrets
+infrastructure/terraform/creds
+**/.terraform/*
+
+# .tfstate files
+*.tfstate*
+*.terraform*
