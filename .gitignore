@@ -27,3 +27,6 @@ infrastructure/terraform/creds
 # .tfstate files
 *.tfstate*
 *.terraform*
+
+# no images on my duty
+**/pictures/*

@@ -1,6 +1,9 @@
 variable "IAM_token" {
   description = "Enter IAM token to access Yandex.Cloud"
 }
+variable "pic_path" {
+  default = "/home/student/pelmeni/pictures"
+}
 
 variable "cloud_id" {
   default = "b1gincs6q48uo3proe1f"

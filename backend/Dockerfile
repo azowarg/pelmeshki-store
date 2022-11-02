@@ -14,4 +14,4 @@ RUN addgroup --system gouser \
 COPY --from=builder /usr/src/app/api ./pelmeshki-backend
 EXPOSE 8081
 USER gouser
-ENTRYPOINT [ "dumb-init", "./backend-pelmeni-store" ]
+ENTRYPOINT [ "dumb-init", "./pelmeshki-backend" ]

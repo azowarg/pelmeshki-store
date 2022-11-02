@@ -5,7 +5,7 @@ terraform {
       source = "yandex-cloud/yandex"
     }
   }
-  // Store tfstate in s3 bucket in yandex_cloud
+  // Store tfstate in s3 bucket in yandex_cloud. Recieve creds from DevOps engineer.
   backend "s3" {
     endpoint                    = "storage.yandexcloud.net"
     bucket                      = "terraform-state-pelmeshki-bucket"
@@ -32,6 +32,16 @@ resource "yandex_storage_bucket" "pelmeski_s3_bucket" {
   max_size   = 1048576
 }
 
+// Put pictures directory in s3 bucket
+resource "yandex_storage_object" "pelmeshki_pictures" {
+  for_each = fileset(var.pic_path, "*")
+  access_key = yandex_iam_service_account_static_access_key.s3_key.access_key
+  secret_key = yandex_iam_service_account_static_access_key.s3_key.secret_key
+  bucket     = "pelmeshki-storage"
+  key = each.value
+  source = "${var.pic_path}/${each.value}"
+
+}
 // Network for k8s needs
 resource "yandex_vpc_network" "k8s-cluster" {
   name        = "k8s-network"
