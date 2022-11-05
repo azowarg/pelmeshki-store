@@ -2,19 +2,23 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: pelmeski-ingress
+  name: pelmeshki-ingress
   labels:
-    name: pelmeski-ingress
+    name: pelmeshki-ingress
 spec:
   ingressClassName: "nginx"
+  tls:
+    - secretName: ian-bodrievskii.ru-tls
+      hosts:
+        - "ian-bodrievskii.ru"
   rules:
-    - host: pelmeshki-store.tech
+    - host: ian-bodrievskii.ru
       http:
         paths:
         - pathType: Prefix
           path: "/"
           backend:
             service:
-              name: pelmeski-frontend-service
+              name: pelmeshki-frontend-service
               port:
                 number: 80

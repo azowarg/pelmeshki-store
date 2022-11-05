@@ -11,9 +11,8 @@ data:
 
         root     /usr/share/nginx/html;
         index    index.html index.html;
-
         location ~ /(orders|products|categories|auth/whoami|health|metrics)  {
-            proxy_pass http://localhost:8081;
+            proxy_pass http://pelmeshki-backend-service:8081;
         }
 
         location / {
