@@ -1,0 +1,11 @@
+apiVersion: v2
+name: pelmeshki-store
+description: pelmeshki-store Helm chart
+type: application
+version: 0.1.3
+appVersion: "latest"
+dependencies:
+  - name: backend
+    version: 0.1.0
+  - name: frontend
+    version: 0.1.0

@@ -7,7 +7,7 @@ spec:
   selector:
     matchLabels:
       app: pelmeshki-backend
-  replicas: 1
+  replicas: 3
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -30,3 +30,6 @@ spec:
           limits:
             memory: "512Mi"
             cpu: "500m"
+          requests:
+            memory: "256Mi"
+            cpu: "250m"

@@ -1,0 +1,30 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-nginx-conf
+  labels:
+    app.kubernetes.io/name: {{ .Release.Name }}
+    app.kubernetes.io/instance: "{{ .Release.Name }}-{{ .Chart.Name }}-configmap"
+    app.kubernetes.io/version: "{{ .Values.tag }}"
+    app.kubernetes.io/managed-by: "{{ .Release.Service }}"
+    helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    app.kubernetes.io/component: {{ .Chart.Name }}
+    app.kubernetes.io/part-of: {{ .Release.Name }}
+    env: "{{ .Values.global.environment }}"
+data:
+  default.conf: |
+    server {
+
+        listen {{ .Values.global.frontendServicePort }};
+        root     /usr/share/nginx/html;
+        index    index.html index.html;
+        location ~ /(orders|products|categories|auth/whoami|health|metrics)  {
+            proxy_pass http://{{ .Release.Name }}-backend-service:{{ .Values.global.backendServicePort}};
+        }
+
+        location / {
+            try_files $uri $uri/ /index.html;
+        }
+    }
+---

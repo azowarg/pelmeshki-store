@@ -1,0 +1,34 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-{{ .Chart.Name }}-deployment
+  labels:
+    app.kubernetes.io/name: {{ .Release.Name }}
+    app.kubernetes.io/instance: "{{ .Release.Name }}-{{ .Chart.Name }}-deployment"
+    app.kubernetes.io/version: "{{ .Values.tag }}"
+    app.kubernetes.io/managed-by: "{{ .Release.Service }}"
+    helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    app.kubernetes.io/component: {{ .Chart.Name }}
+    app.kubernetes.io/part-of: {{ .Release.Name }}
+    env: "{{ .Values.global.environment }}"
+spec:
+  revisionHistoryLimit: {{ .Values.global.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-{{ .Chart.Name }}
+  replicas: {{ .Values.replicasCount}}
+  strategy: {{ toYaml .Values.strategy | nindent 4}}
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-{{ .Chart.Name }}
+    spec:
+      imagePullSecrets: {{ toYaml .Values.global.imagePullSecrets | nindent 6 }}
+      containers:
+      - name: {{ .Release.Name }}-{{ .Chart.Name }}
+        imagePullPolicy: "Always"
+        image: {{ .Values.image }}:{{ .Values.tag }}
+        ports:
+          - containerPort: {{ .Values.global.backendServicePort}}
+        resources: {{ toYaml .Values.resources | nindent 10 }}

@@ -10,7 +10,7 @@ spec:
   tls:
     - secretName: ian-bodrievskii.ru-tls
       hosts:
-        - "ian-bodrievskii.ru"
+        - ian-bodrievskii.ru
   rules:
     - host: ian-bodrievskii.ru
       http:
