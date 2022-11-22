@@ -100,3 +100,25 @@ backend-upload-docker-images:
     - docker pull $CI_REGISTRY_IMAGE/${APP_NAME}-${APP_PART}:${APP_VERSION}
     - docker tag $CI_REGISTRY_IMAGE/${APP_NAME}-${APP_PART}:${APP_VERSION} $CI_REGISTRY_IMAGE/${APP_NAME}-${APP_PART}:latest
     - docker push $CI_REGISTRY_IMAGE/${APP_NAME}-${APP_PART}:latest
+
+
+backend-upload-helm:
+  stage: release
+  variables:
+    APP_PART: helm
+  image:
+    name: alpine/helm
+  before_script:
+    - apk add wget curl
+    - wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+    - chmod a+x /usr/local/bin/yq
+    - >
+      export LATEST_FRONTEND_TAG=$(curl ${GITLAB_REGISTRY_API}/${GITLAB_REGISTRY_FRONTEND_ID}/tags --header "PRIVATE-TOKEN: ${GITLAB_PRIVATE_TOKEN}" -s | yq -P 'sort_by(.[].name) | .[].name' | grep -v latest -m 1)
+  script:
+    - cd infrastructure/helm/pelmeshki-store
+    - yq -i '.backend.tag=env(APP_VERSION)' values.yaml
+    - yq -i '.frontend.tag=env(LATEST_FRONTEND_TAG)' values.yaml
+    - yq -i '.version=env(APP_VERSION)' charts/backend/Chart.yaml
+    - yq -i '.version=env(LATEST_FRONTEND_TAG)' charts/frontend/Chart.yaml
+    - helm package . --version ${APP_VERSION}
+    - curl  -u "${NEXUS_REPO_USER}:$(echo ${NEXUS_REPO_PASS} | base64 -d)" --upload-file ${APP_NAME}-${APP_VERSION}.tgz ${NEXUS_REPO_URL}-${APP_NAME}-${APP_PART}/ -s
