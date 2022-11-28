@@ -7,7 +7,7 @@ global:
   frontendServicePort: 80
 backend:
   image: gitlab.praktikum-services.ru:5050/yan-bodriyevskiy/pelmeni-store/pelmeshki-backend
-  tag: 1.0.293273
+  tag: latest
   replicasCount: 3
   resources:
     limits:
@@ -41,7 +41,7 @@ frontend:
   volumesNginx:
     - name: nginx-conf
       configMap:
-        name: pelmeshki-store-nginx-conf
+        name: pelmeshki-nginx-conf
         items:
           - key: default.conf
             path: default.conf

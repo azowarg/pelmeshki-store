@@ -1,0 +1,91 @@
+# tasks file for subspace
+
+- name: Add user to group docker
+  ansible.builtin.user:
+    name: "{{ item }}"
+    groups: docker
+    append: yes
+  become: true
+  loop:
+    - ansible
+
+- name: apt install python3-docker
+  ansible.builtin.apt:
+    pkg:
+      - python3-docker
+      - docker-compose-plugin
+  become: true
+
+- name: Install pip docker
+  ansible.builtin.pip:
+    name:
+      - docker
+      - docker-compose==1.25.0
+  become: yes
+  tags: docker_compose
+
+- name: Make directory for nginx conf
+  ansible.builtin.file:
+    state: directory
+
+
+- name:  Copy nginx config
+  ansible.builtin.template:
+    src: "{{item.src}}"
+    dest: "{{item.dest}}"
+  loop:
+    - { src: "pelmeshki.conf.j2", dest: "/var/nginx/pelmeshki.conf"}
+  become: true
+
+- name: Docker-compose down
+  community.docker.docker_compose:
+    project_name: pelmeski
+    state: absent
+    definition: &config
+      version: "3.7"
+      services:
+        pelmeshki-backend:
+          image: gitlab.praktikum-services.ru:5050/yan-bodriyevskiy/pelmeni-store/pelmeshki-backend:latest
+          restart: unless-stopped
+          healthcheck:
+            timeout: 5s
+            interval: 30s
+            retries: 5
+          networks:
+            - pelmeshki-nerwork
+
+        pelmeshki-frontend:
+          image: gitlab.praktikum-services.ru:5050/yan-bodriyevskiy/pelmeni-store/pelmeshki-frontend:latest
+          restart: unless-stopped
+          volumes:
+            - /var/nginx/:/etc/nginx/conf.d/:rm
+          ports:
+            - 80:80
+          networks:
+            - pelmeshki-nerwork
+          healthcheck:
+            timeout: 5s
+            interval: 30s
+            retries: 5
+
+      volumes:
+        nginx-data:
+      networks:
+        pelmeshki-nerwork:
+
+  ignore_errors: true
+  become: yes
+  tags: docker_compose_down
+
+- name: Docker-compose config
+  community.docker.docker_compose:
+    project_name: pelmeshki
+    definition: *config
+  register: output
+  become: yes
+  tags: docker_compose
+
+- name: Docker-compose debug
+  ansible.builtin.debug:
+    var: output
+  tags: docker_compose

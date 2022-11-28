@@ -34,12 +34,12 @@ resource "yandex_storage_bucket" "pelmeski_s3_bucket" {
 
 // Put pictures directory in s3 bucket
 resource "yandex_storage_object" "pelmeshki_pictures" {
-  for_each = fileset(var.pic_path, "*")
+  for_each   = fileset(var.pic_path, "*")
   access_key = yandex_iam_service_account_static_access_key.s3_key.access_key
   secret_key = yandex_iam_service_account_static_access_key.s3_key.secret_key
   bucket     = "pelmeshki-storage"
-  key = each.value
-  source = "${var.pic_path}/${each.value}"
+  key        = each.value
+  source     = "${var.pic_path}/${each.value}"
 
 }
 // Network for k8s needs
@@ -59,20 +59,20 @@ resource "yandex_vpc_subnet" "k8s-cluster-subnet" {
 
 // K8s cluster for our store
 resource "yandex_kubernetes_cluster" "pelmeshki_k8s_cluster" {
- network_id = yandex_vpc_network.k8s-cluster.id
- master {
-  public_ip = true
-   zonal {
-     zone      = yandex_vpc_subnet.k8s-cluster-subnet.zone
-     subnet_id = yandex_vpc_subnet.k8s-cluster-subnet.id
-   }
- }
- service_account_id      = yandex_iam_service_account.sa["k8s"].id
- node_service_account_id = yandex_iam_service_account.sa["k8s"].id
-   depends_on = [
-     yandex_resourcemanager_folder_iam_binding.k8s_editor_role,
-     yandex_resourcemanager_folder_iam_binding.docker_image_puller_role
-   ]
+  network_id = yandex_vpc_network.k8s-cluster.id
+  master {
+    public_ip = true
+    zonal {
+      zone      = yandex_vpc_subnet.k8s-cluster-subnet.zone
+      subnet_id = yandex_vpc_subnet.k8s-cluster-subnet.id
+    }
+  }
+  service_account_id      = yandex_iam_service_account.sa["k8s"].id
+  node_service_account_id = yandex_iam_service_account.sa["k8s"].id
+  depends_on = [
+    yandex_resourcemanager_folder_iam_binding.k8s_editor_role,
+    yandex_resourcemanager_folder_iam_binding.docker_image_puller_role
+  ]
 }
 
 // Setup nodes in kluster
@@ -81,19 +81,19 @@ resource "yandex_kubernetes_node_group" "pelmeshki_k8s_nodes" {
   instance_template {
     platform_id = "standard-v1"
     network_interface {
-      nat = true
+      nat        = true
       subnet_ids = ["${yandex_vpc_subnet.k8s-cluster-subnet.id}"]
     }
     resources {
       memory = 4
-      cores = 2
+      cores  = 2
     }
     boot_disk {
       type = "network-ssd"
       size = 64
     }
     container_runtime {
-     type = "docker"
+      type = "docker"
     }
   }
   scale_policy {
@@ -106,4 +106,36 @@ resource "yandex_kubernetes_node_group" "pelmeshki_k8s_nodes" {
       zone = var.zone
     }
   }
+}
+
+// VM for development branch
+resource "yandex_compute_instance" "vm" {
+  name = "pelmeshki-store-vm"
+
+  resources {
+    cores  = 2
+    memory = 2
+  }
+
+  boot_disk {
+    initialize_params {
+      image_id = var.image
+    }
+  }
+
+  network_interface {
+    subnet_id = var.subnet
+    nat       = true
+  }
+
+  metadata = {
+    user-data = "${file("./userdata")}"
+  }
+}
+
+output "external_ip_address" {
+  value = yandex_compute_instance.vm.network_interface.0.nat_ip_address
+}
+output "k8s" {
+  value = yandex_kubernetes_cluster.pelmeshki_k8s_cluster.master[0].external_v4_address
 }

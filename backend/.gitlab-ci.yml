@@ -2,13 +2,14 @@ stages:
   - build
   - test
   - release
+  - deploy
 
 variables:
   SAST_EXCLUDED_ANALYZERS: "nodejs-scan"
   APP_PART: backend
 
 include:
-  - template: Security/SAST.gitlab-ci.yml
+  # - template: Security/SAST.gitlab-ci.yml
   - project: 'templates/ci'
     file: 'DockerInDockerTemplate.yml'
 
@@ -51,12 +52,12 @@ backend-build-docker-image:
       --dockerfile "${CI_PROJECT_DIR}/${APP_PART}/Dockerfile"
       --destination "${CI_REGISTRY_IMAGE}/${APP_NAME}-${APP_PART}:${APP_VERSION}"
 
-gosec-sast:
-  stage: test
-  script:
-    - /analyzer run  --target-dir ${CI_PROJECT_DIR}/${APP_PART}/ --artifact-dir ${CI_PROJECT_DIR}/${APP_PART}/
+# gosec-sast:
+#   stage: test
+#   script:
+#     - /analyzer run  --target-dir ${CI_PROJECT_DIR}/${APP_PART}/ --artifact-dir ${CI_PROJECT_DIR}/${APP_PART}/
 
-backend-sonarqube-sast:
+.backend-sonarqube-sast:
   dependencies: []
   stage: test
   image:
@@ -101,19 +102,20 @@ backend-upload-docker-images:
     - docker tag $CI_REGISTRY_IMAGE/${APP_NAME}-${APP_PART}:${APP_VERSION} $CI_REGISTRY_IMAGE/${APP_NAME}-${APP_PART}:latest
     - docker push $CI_REGISTRY_IMAGE/${APP_NAME}-${APP_PART}:latest
 
-
 backend-upload-helm:
   stage: release
   variables:
     APP_PART: helm
   image:
-    name: alpine/helm
+    name: alpine/k8s:1.23.14
   before_script:
     - apk add wget curl
     - wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
     - chmod a+x /usr/local/bin/yq
     - >
-      export LATEST_FRONTEND_TAG=$(curl ${GITLAB_REGISTRY_API}/${GITLAB_REGISTRY_FRONTEND_ID}/tags --header "PRIVATE-TOKEN: ${GITLAB_PRIVATE_TOKEN}" -s | yq -P 'sort_by(.[].name) | .[].name' | grep -v latest -m 1)
+      export LATEST_GITLAB_REGISTRY_PAGE=$(curl ${GITLAB_REGISTRY_API}/${GITLAB_REGISTRY_FRONTEND_ID}/tags?per_page=100 --header "PRIVATE-TOKEN: ${GITLAB_PRIVATE_TOKEN}" -s -D - | awk -F ':' '/^x-total-pages/ {print $2}' | tr -d "\r")
+    - >
+      export LATEST_FRONTEND_TAG=$(curl  --header "PRIVATE-TOKEN: ${GITLAB_PRIVATE_TOKEN}" "${GITLAB_REGISTRY_API}/${GITLAB_REGISTRY_FRONTEND_ID}/tags?per_page=100&page=$(echo -n $LATEST_GITLAB_REGISTRY_PAGE)" -s | yq -P 'sort_by(.[].name) | reverse | .[].name' | grep -v latest -m 1)
   script:
     - cd infrastructure/helm/pelmeshki-store
     - yq -i '.backend.tag=env(APP_VERSION)' values.yaml
@@ -122,3 +124,44 @@ backend-upload-helm:
     - yq -i '.version=env(LATEST_FRONTEND_TAG)' charts/frontend/Chart.yaml
     - helm package . --version ${APP_VERSION}
     - curl  -u "${NEXUS_REPO_USER}:$(echo ${NEXUS_REPO_PASS} | base64 -d)" --upload-file ${APP_NAME}-${APP_VERSION}.tgz ${NEXUS_REPO_URL}-${APP_NAME}-${APP_PART}/ -s
+
+backend-deploy-k8s:
+  stage: deploy
+  image:
+    name: alpine/k8s:1.23.14
+  variables:
+    APP_PART: helm
+  # only:
+  #   variables:
+  #     - $CI_COMMIT_BRANCH == "main"
+  before_script:
+  - mkdir ~/.kube/ && touch ~/.kube/config && chmod 600 ~/.kube/config
+  - echo ${K8S_CONFIG} | base64 -d > ~/.kube/config
+  - echo ${CA_CRT} | base64 -d > ~/.kube/ca.pem
+  - kubectl config use-context default
+  - helm repo add nexus_yan_bodrievskiy ${NEXUS_REPO_URL}-${APP_NAME}-${APP_PART} --username ${NEXUS_REPO_USER} --password $(echo ${NEXUS_REPO_PASS} | base64 -d)
+  - helm repo update
+  script:
+  - kubectl config set-context --current --namespace default
+  - helm upgrade --install ${APP_NAME}
+    --atomic
+    --timeout 15m
+    --set global.environment=production
+    nexus_yan_bodrievskiy/${APP_NAME}
+
+backend-deploy-docker:
+  stage: deploy
+  image: python:3.9-slim
+  # only:
+  #   variables:
+  #     - $CI_COMMIT_BRANCH == "development"
+  before_script:
+    - 'command -v ssh-agent >/dev/null || ( apt-get update -y && apt-get install openssh-client -y )'
+    - eval $(ssh-agent -s)
+    - echo ${SSH_PRIVATE_KEY} | base64 -d | tr -d '\r' | ssh-add -
+    - python3 -m pip install --user ansible
+    - PATH=$PATH:/root/.local/bin
+  script:
+    - cd infrastructure/ansible
+    - ansible --version
+    - ansible-playbook pelmeshki.yaml

@@ -1,0 +1,5 @@
+- name: Install sausage-store
+  hosts: pelmeshki
+  roles:
+    - geerlingguy.docker
+    - pelmeshki-docker

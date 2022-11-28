@@ -17,9 +17,9 @@ spec:
   tls:
     - secretName: "{{ .Values.fqdn }}-tls"
       hosts:
-        - {{ .Values.fqdn }}
+        - "{{ .Release.Name }}.{{ .Values.fqdn }}"
   rules:
-    - host: {{ .Values.fqdn }}
+    - host: "{{ .Release.Name }}.{{ .Values.fqdn }}"
       http:
         paths:
         - pathType: Prefix
