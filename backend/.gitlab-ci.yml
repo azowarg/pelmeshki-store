@@ -164,4 +164,4 @@ backend-deploy-docker:
   script:
     - cd infrastructure/ansible
     - ansible --version
-    - ansible-playbook pelmeshki.yaml
+    - ansible-playbook pelmeshki.yaml -b

@@ -170,7 +170,7 @@ frontend-deploy-docker:
   script:
     - cd infrastructure/ansible
     - ansible --version
-    - ansible-playbook pelmeshki.yaml
+    - ansible-playbook pelmeshki.yaml -b
 
 delete-frontend-k8s:
   stage: deploy
