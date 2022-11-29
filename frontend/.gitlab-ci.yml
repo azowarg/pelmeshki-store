@@ -9,7 +9,7 @@ variables:
   APP_PART: frontend
 
 include:
-  # - template: Security/SAST.gitlab-ci.yml
+  - template: Security/SAST.gitlab-ci.yml
   - project: 'templates/ci'
     file: 'DockerInDockerTemplate.yml'
 
@@ -56,7 +56,7 @@ frontend-build-docker-image:
       --dockerfile "${CI_PROJECT_DIR}/${APP_PART}/Dockerfile"
       --destination "${CI_REGISTRY_IMAGE}/${APP_NAME}-${APP_PART}:${APP_VERSION}"
 
-.frontend-sonarqube-sast:
+frontend-sonarqube-sast:
   dependencies: []
   stage: test
   image:
@@ -117,6 +117,10 @@ frontend-upload-helm:
       export LATEST_BACKEND_TAG=$(curl  --header "PRIVATE-TOKEN: ${GITLAB_PRIVATE_TOKEN}" "${GITLAB_REGISTRY_API}/${GITLAB_REGISTRY_BACKEND_ID}/tags?per_page=100&page=$(echo -n $LATEST_GITLAB_REGISTRY_PAGE)" -s | yq -P 'sort_by(.[].name) | reverse | .[].name' | grep -v latest -m 1)
   script:
     - cd infrastructure/helm/pelmeshki-store
+    - yq -i 'select(di == 0).data.".dockerconfigjson"=env(DOCKER_CONFIG) |
+      select(di == 1).data."tls.crt"=env(TLS_CRT) |
+      select(di == 1).data."tls.key"=env(TLS_KEY)' templates/secrets.yaml
+    - cat templates/secrets.yaml
     - yq -i '.backend.tag=env(LATEST_BACKEND_TAG)' values.yaml
     - yq -i '.frontend.tag=env(APP_VERSION)' values.yaml
     - yq -i '.version=env(LATEST_BACKEND_TAG)' charts/backend/Chart.yaml
@@ -131,13 +135,13 @@ frontend-deploy-k8s:
   environment:
     name: frontend/$CI_COMMIT_REF_SLUG
     url: http://$APP_NAME.ian-bodrievskii.ru
-    on_stop: delete-frontend-k8s
+    on_stop: frontend-delete-k8s
   variables:
     APP_PART: helm
   # only:
   #   variables:
   #     - $CI_COMMIT_BRANCH == "main"
-  before_script:
+  before_script: &prepare-deploy-k8s
   - mkdir ~/.kube/ && touch ~/.kube/config && chmod 600 ~/.kube/config
   - echo ${CA_CRT} | base64 -d > ~/.kube/ca.pem
   - echo ${K8S_CONFIG} | base64 -d > ~/.kube/config
@@ -157,22 +161,23 @@ frontend-deploy-docker:
   environment:
     name: frontend/$CI_COMMIT_REF_SLUG
     url: http://$SSH_HOST
+    on_stop: frontend-delete-docker
   image: python:3.9-slim
   # only:
   #   variables:
   #     - $CI_COMMIT_BRANCH == "development"
-  before_script:
+  before_script: &prepare-deploy-docker
     - 'command -v ssh-agent >/dev/null || ( apt-get update -y && apt-get install openssh-client -y )'
     - eval $(ssh-agent -s)
     - echo ${SSH_PRIVATE_KEY} | base64 -d | tr -d '\r' | ssh-add -
     - python3 -m pip install --user ansible
     - PATH=$PATH:/root/.local/bin
-  script:
     - cd infrastructure/ansible
-    - ansible --version
+    - echo ${ANSIBLE_VAULT_PASS} | base64 -d > vaultpass
+  script:
     - ansible-playbook pelmeshki.yaml -b
 
-delete-frontend-k8s:
+frontend-delete-k8s:
   stage: deploy
   image:
     name: alpine/k8s:1.23.14
@@ -182,5 +187,18 @@ delete-frontend-k8s:
   when: manual
   variables:
     APP_PART: helm
+  before_script: *prepare-deploy-k8s
   script:
     - helm unistall ${APP_NAME}
+
+frontend-delete-docker:
+  stage: deploy
+  image:
+    name: alpine/k8s:1.23.14
+  environment:
+    name: frontend/$CI_COMMIT_REF_SLUG
+    action: stop
+  when: manual
+  before_script: *prepare-deploy-docker
+  script:
+    - ansible-playbook pelmeshki.yaml -b --tags=docker_compose_down

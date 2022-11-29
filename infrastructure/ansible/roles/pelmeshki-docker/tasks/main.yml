@@ -14,6 +14,7 @@
     pkg:
       - python3-docker
       - docker-compose-plugin
+      - pip
   become: true
 
 - name: Install pip docker
@@ -27,15 +28,26 @@
 - name: Make directory for nginx conf
   ansible.builtin.file:
     state: directory
+    path: /var/nginx
+  become: yes
 
-
-- name:  Copy nginx config
+- name:  Copy templates
   ansible.builtin.template:
     src: "{{item.src}}"
     dest: "{{item.dest}}"
+    mode: "0777"
   loop:
     - { src: "pelmeshki.conf.j2", dest: "/var/nginx/pelmeshki.conf"}
+    - { src: "dockerconfig.j2", dest: "/home/ansible/dockerconfig.json"}
   become: true
+
+- name:
+  community.docker.docker_login:
+    registry_url: gitlab.praktikum-services.ru:5050
+    username: "{{ docker_login }}"
+    password: "{{ docker_password }}"
+  tags: login
+
 
 - name: Docker-compose down
   community.docker.docker_compose:
@@ -58,7 +70,7 @@
           image: gitlab.praktikum-services.ru:5050/yan-bodriyevskiy/pelmeni-store/pelmeshki-frontend:latest
           restart: unless-stopped
           volumes:
-            - /var/nginx/:/etc/nginx/conf.d/:rm
+            - /var/nginx/:/etc/nginx/conf.d/:rw
           ports:
             - 80:80
           networks:
@@ -81,6 +93,7 @@
   community.docker.docker_compose:
     project_name: pelmeshki
     definition: *config
+    pull: true
   register: output
   become: yes
   tags: docker_compose
