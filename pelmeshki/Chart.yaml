@@ -1,0 +1,11 @@
+apiVersion: v2
+appVersion: latest
+dependencies:
+- name: backend
+  repository: ""
+- name: frontend
+  repository: ""
+description: pelmeshki helm chart
+name: pelmeshki
+type: application
+version: 1.0.306983

@@ -1,0 +1,9 @@
+#cloud-config
+users:
+  - default
+  - name: ansible
+    group: ansible
+    shell: /bin/bash
+    sudo: ['ALL=(ALL:ALL) NOPASSWD:ALL']
+    ssh_authorized_keys:
+      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC+gsynomdBHh8hlWMtcImCJyYB5cFo0eChH7YK4/UvxC/5oOA98UqlYs7XKmXCkUJ2TzhfklL+YHjcHCQgP+0BnkGisaPQTx9dIvw6XNmbDy0AyofvYKdDjpNit9gFWMpv4jX4SaZ30MCByVR2fJ0J2P2397gnSvEXeHt+d/EiUiKktlL86c84HUH7xi/PgtURNXn24rYFYMnx+OYxLi6V/r/2VRJjRqomQV/pMdC/cevRREqlmA9IffnVcTo1A/Hu95A7cRrEN3Iy+QY1EVy7qudX0xCbnvhrm/hW+2mcXqyzF3UHMCsvQse2ZpPs8sQDWYFVpCg9FJM9qp3yQg5h deploy_key

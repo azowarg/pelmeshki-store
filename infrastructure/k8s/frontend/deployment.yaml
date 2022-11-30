@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pelmeshki-frontend
+  labels:
+    app: pelmeshki-frontend
+spec:
+  revisionHistoryLimit: 15
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: pelmeshki-frontend
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: pelmeshki-frontend
+    spec:
+      imagePullSecrets:
+        - name: dockerpull
+      containers:
+      - name: pelmeshki-frontend
+        image: gitlab.praktikum-services.ru:5050/yan-bodriyevskiy/pelmeni-store/pelmeshki-frontend:latest
+        resources:
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 80
+        volumeMounts:
+          - name: nginx-conf
+            mountPath: /etc/nginx/conf.d/default.conf
+            subPath: default.conf
+            readOnly: true
+      volumes:
+        - name: nginx-conf
+          configMap:
+            name: nginx-conf
+            items:
+              - key: default.conf
+                path: default.conf
