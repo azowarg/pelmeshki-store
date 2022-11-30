@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-{{ .Chart.Name }}-service
+  labels:
+    app.kubernetes.io/name: {{ .Release.Name }}
+    app.kubernetes.io/instance: "{{ .Release.Name }}-{{ .Chart.Name }}-service"
+    app.kubernetes.io/version: "{{ .Values.tag }}"
+    app.kubernetes.io/managed-by: "{{ .Release.Service }}"
+    helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    app.kubernetes.io/component: {{ .Chart.Name }}
+    app.kubernetes.io/part-of: {{ .Release.Name }}
+    env: "{{ .Values.global.environment }}"
+spec:
+  selector:
+    app: {{ .Release.Name }}-{{ .Chart.Name }}
+  ports:
+  - port: {{ .Values.global.backendServicePort }}
+    targetPort: {{ .Values.global.backendServicePort }}

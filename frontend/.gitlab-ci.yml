@@ -138,9 +138,9 @@ frontend-deploy-k8s:
     on_stop: frontend-delete-k8s
   variables:
     APP_PART: helm
-  # only:
-  #   variables:
-  #     - $CI_COMMIT_BRANCH == "main"
+  only:
+    variables:
+      - $CI_COMMIT_BRANCH == "main"
   before_script: &prepare-deploy-k8s
   - mkdir ~/.kube/ && touch ~/.kube/config && chmod 600 ~/.kube/config
   - echo ${CA_CRT} | base64 -d > ~/.kube/ca.pem
@@ -163,9 +163,9 @@ frontend-deploy-docker:
     url: http://$SSH_HOST
     on_stop: frontend-delete-docker
   image: python:3.9-slim
-  # only:
-  #   variables:
-  #     - $CI_COMMIT_BRANCH == "development"
+  only:
+    variables:
+      - $CI_COMMIT_BRANCH == "development"
   before_script: &prepare-deploy-docker
     - 'command -v ssh-agent >/dev/null || ( apt-get update -y && apt-get install openssh-client -y )'
     - eval $(ssh-agent -s)
@@ -199,6 +199,9 @@ frontend-delete-docker:
     name: frontend/$CI_COMMIT_REF_SLUG
     action: stop
   when: manual
+  only:
+    variables:
+      - $CI_COMMIT_BRANCH == "development"
   before_script: *prepare-deploy-docker
   script:
     - ansible-playbook pelmeshki.yaml -b --tags=docker_compose_down

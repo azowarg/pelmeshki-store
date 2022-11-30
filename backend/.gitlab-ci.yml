@@ -135,9 +135,9 @@ backend-deploy-k8s:
     name: alpine/k8s:1.23.14
   variables:
     APP_PART: helm
-  # only:
-  #   variables:
-  #     - $CI_COMMIT_BRANCH == "main"
+  only:
+    variables:
+      - $CI_COMMIT_BRANCH == "main"
   before_script: &prepare-deploy-k8s
   - mkdir ~/.kube/ && touch ~/.kube/config && chmod 600 ~/.kube/config
   - echo ${K8S_CONFIG} | base64 -d > ~/.kube/config
@@ -156,9 +156,9 @@ backend-deploy-k8s:
 backend-deploy-docker:
   stage: deploy
   image: python:3.9-slim
-  # only:
-  #   variables:
-  #     - $CI_COMMIT_BRANCH == "development"
+  only:
+    variables:
+      - $CI_COMMIT_BRANCH == "development"
   before_script: &prepare-deploy-docker
     - 'command -v ssh-agent >/dev/null || ( apt-get update -y && apt-get install openssh-client -y )'
     - eval $(ssh-agent -s)
