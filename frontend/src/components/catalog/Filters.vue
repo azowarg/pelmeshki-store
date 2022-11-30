@@ -35,7 +35,7 @@ export default defineComponent({
     handleChange(event: Event) {
       const target = event.target as HTMLInputElement;
       const category_id = parseInt(target.value);
-      
+
       if(target.checked) {
         this.selected.push(category_id);
       } else {

@@ -1,0 +1,14 @@
+server {
+
+       listen 80;
+
+       root     /usr/share/nginx/html;
+       index    index.html index.html;
+       location ~ /(orders|products|categories|auth/whoami|health|metrics)  {
+           proxy_pass http://pelmeshki_pelmeshki-backshnd_1:8081;
+       }
+
+       location / {
+           try_files $uri $uri/ /index.html;
+       }
+   }

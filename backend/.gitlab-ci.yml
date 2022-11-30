@@ -1,0 +1,172 @@
+stages:
+  - build
+  - test
+  - release
+  - deploy
+
+variables:
+  SAST_EXCLUDED_ANALYZERS: "nodejs-scan"
+  APP_PART: backend
+
+include:
+  - template: Security/SAST.gitlab-ci.yml
+  - project: 'templates/ci'
+    file: 'DockerInDockerTemplate.yml'
+
+backend-build-artifacts:
+  stage: build
+  image: golang
+  cache:
+    key: golang
+    paths:
+      - ${GOCACHE}
+  script:
+    - cd ${APP_PART}
+    - go test -v ./...
+    - go build ./cmd/api
+    - mv ./api ./${APP_NAME}-${APP_PART}-${APP_VERSION}
+  artifacts:
+    untracked: false
+    expire_in: "7 days"
+    paths:
+      - ${CI_PROJECT_DIR}/${APP_PART}/${APP_NAME}-${APP_PART}-${APP_VERSION}
+
+backend-build-docker-image:
+  stage: build
+  cache:
+    key: golang-${APP_PART}
+    paths:
+      - ${GOCACHE}
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  script:
+    - mkdir -p /kaniko/.docker
+    - echo "{\"auths\":{\"${CI_REGISTRY}\":{\"auth\":\"$(printf "%s:%s" "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
+    - >
+      /kaniko/executor
+      --build-arg GOCACHE=${GOCACHE}
+      --use-new-run
+      --cache=true
+      --context "${CI_PROJECT_DIR}/${APP_PART}"
+      --dockerfile "${CI_PROJECT_DIR}/${APP_PART}/Dockerfile"
+      --destination "${CI_REGISTRY_IMAGE}/${APP_NAME}-${APP_PART}:${APP_VERSION}"
+
+gosec-sast:
+  stage: test
+  script:
+    - /analyzer run  --target-dir ${CI_PROJECT_DIR}/${APP_PART}/ --artifact-dir ${CI_PROJECT_DIR}/${APP_PART}/
+
+backend-sonarqube-sast:
+  dependencies: []
+  stage: test
+  image:
+    name: sonarsource/sonar-scanner-cli:latest
+  cache:
+    key: golang-sonar
+    paths:
+      - ${SONARQUBE_CACHE_SCANNERWORK}
+      - ${SONARQUBE_CACHE_GITLAB}
+  before_script:
+    - mkdir ${SONARQUBE_CACHE_GITLAB} || true
+    - cp -r ${SONARQUBE_CACHE_GITLAB} ${SONARQUBE_CACHE} || true
+  script:
+    - cd ${APP_PART}
+    - >
+      sonar-scanner -Dsonar.qualitygate.wait=true
+      -Dsonar.projectKey=${SONARQUBE_TOKEN_NAME}
+      -Dsonar.host.url=${SONARQUBE_URL}
+      -Dsonar.login=${SONARQUBE_TOKEN}
+      -Dsonar.projectName=YANBODRIEVSKIY_${APP_NAME^^}_${APP_PART^^}
+      -Dsonar.user.home=${SONARQUBE_CACHE}
+    - cp -r ${SONARQUBE_CACHE}/* ${SONARQUBE_CACHE_GITLAB}
+
+backend-upload-artifacts:
+  variables:
+    GIT_STRATEGY: none
+  stage: release
+  script:
+    - tar czvf ${APP_NAME}-${APP_PART}-${APP_VERSION}.tar.gz ${CI_PROJECT_DIR}/${APP_PART}/${APP_NAME}-${APP_PART}-${APP_VERSION}
+    - curl  -u "${NEXUS_REPO_USER}:$(echo ${NEXUS_REPO_PASS} | base64 -d)" --upload-file ${APP_NAME}-${APP_PART}-${APP_VERSION}.tar.gz ${NEXUS_REPO_URL}-${APP_NAME}-${APP_PART}/${APP_NAME}/${APP_PART}/${APP_VERSION}/${APP_NAME}-${APP_PART}-${APP_VERSION}.tar.gz
+
+backend-upload-docker-images:
+  variables:
+    GIT_STRATEGY: none
+  image: docker:20.10.12-dind-rootless
+  stage: release
+  before_script:
+    - until docker info; do sleep 1; done
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - docker pull $CI_REGISTRY_IMAGE/${APP_NAME}-${APP_PART}:${APP_VERSION}
+    - docker tag $CI_REGISTRY_IMAGE/${APP_NAME}-${APP_PART}:${APP_VERSION} $CI_REGISTRY_IMAGE/${APP_NAME}-${APP_PART}:latest
+    - docker push $CI_REGISTRY_IMAGE/${APP_NAME}-${APP_PART}:latest
+
+backend-upload-helm:
+  stage: release
+  variables:
+    APP_PART: helm
+  image:
+    name: alpine/k8s:1.23.14
+  before_script:
+    - apk add wget curl
+    - wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+    - chmod a+x /usr/local/bin/yq
+    - >
+      export LATEST_GITLAB_REGISTRY_PAGE=$(curl ${GITLAB_REGISTRY_API}/${GITLAB_REGISTRY_FRONTEND_ID}/tags?per_page=100 --header "PRIVATE-TOKEN: ${GITLAB_PRIVATE_TOKEN}" -s -D - | awk -F ':' '/^x-total-pages/ {print $2}' | tr -d "\r")
+    - >
+      export LATEST_FRONTEND_TAG=$(curl  --header "PRIVATE-TOKEN: ${GITLAB_PRIVATE_TOKEN}" "${GITLAB_REGISTRY_API}/${GITLAB_REGISTRY_FRONTEND_ID}/tags?per_page=100&page=$(echo -n $LATEST_GITLAB_REGISTRY_PAGE)" -s | yq -P 'sort_by(.[].name) | reverse | .[].name' | grep -v latest -m 1)
+  script:
+    - cd infrastructure/helm/pelmeshki-store
+    - yq -i 'select(di == 0).data.".dockerconfigjson"=env(DOCKER_CONFIG) |
+      select(di == 1).data."tls.crt"=env(TLS_CRT) |
+      select(di == 1).data."tls.key"=env(TLS_KEY)' templates/secrets.yaml
+    - cat templates/secrets.yaml
+    - yq -i '.backend.tag=env(APP_VERSION)' values.yaml
+    - yq -i '.frontend.tag=env(LATEST_FRONTEND_TAG)' values.yaml
+    - yq -i '.version=env(APP_VERSION)' charts/backend/Chart.yaml
+    - yq -i '.version=env(LATEST_FRONTEND_TAG)' charts/frontend/Chart.yaml
+    - helm package . --version ${APP_VERSION}
+    - curl  -u "${NEXUS_REPO_USER}:$(echo ${NEXUS_REPO_PASS} | base64 -d)" --upload-file ${APP_NAME}-${APP_VERSION}.tgz ${NEXUS_REPO_URL}-${APP_NAME}-${APP_PART}/ -s
+
+backend-deploy-k8s:
+  stage: deploy
+  image:
+    name: alpine/k8s:1.23.14
+  variables:
+    APP_PART: helm
+  only:
+    variables:
+      - $CI_COMMIT_BRANCH == "main"
+  before_script: &prepare-deploy-k8s
+  - mkdir ~/.kube/ && touch ~/.kube/config && chmod 600 ~/.kube/config
+  - echo ${K8S_CONFIG} | base64 -d > ~/.kube/config
+  - echo ${CA_CRT} | base64 -d > ~/.kube/ca.pem
+  - kubectl config use-context default
+  - helm repo add nexus_yan_bodrievskiy ${NEXUS_REPO_URL}-${APP_NAME}-${APP_PART} --username ${NEXUS_REPO_USER} --password $(echo ${NEXUS_REPO_PASS} | base64 -d)
+  - helm repo update
+  script:
+  - kubectl config set-context --current --namespace default
+  - helm upgrade --install ${APP_NAME}
+    --atomic
+    --timeout 15m
+    --set global.environment=production
+    nexus_yan_bodrievskiy/${APP_NAME}
+
+backend-deploy-docker:
+  stage: deploy
+  image: python:3.9-slim
+  only:
+    variables:
+      - $CI_COMMIT_BRANCH == "development"
+  before_script: &prepare-deploy-docker
+    - 'command -v ssh-agent >/dev/null || ( apt-get update -y && apt-get install openssh-client -y )'
+    - eval $(ssh-agent -s)
+    - echo ${SSH_PRIVATE_KEY} | base64 -d | tr -d '\r' | ssh-add -
+    - python3 -m pip install --user ansible
+    - PATH=$PATH:/root/.local/bin
+  script:
+    - cd infrastructure/ansible
+    - echo ${ANSIBLE_VAULT_PASS} | base64 -d > vaultpass
+    - ansible --version
+    - ansible-playbook pelmeshki.yaml -b

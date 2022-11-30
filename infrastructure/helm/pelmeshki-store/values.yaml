@@ -1,0 +1,47 @@
+global:
+  imagePullSecrets:
+    - name: dockerpull
+  environment: yandex-cloud
+  revisionHistoryLimit: 15
+  backendServicePort: 8081
+  frontendServicePort: 80
+backend:
+  image: gitlab.praktikum-services.ru:5050/yan-bodriyevskiy/pelmeni-store/pelmeshki-backend
+  tag: latest
+  replicasCount: 3
+  resources:
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 20%
+      maxUnavailable: 2
+frontend:
+  image: gitlab.praktikum-services.ru:5050/yan-bodriyevskiy/pelmeni-store/pelmeshki-frontend
+  tag: latest
+  replicasCount: 1
+  fqdn: ian-bodrievskii.ru
+  resources:
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+  volumeMountsNginx:
+    - name: nginx-conf
+      mountPath: /etc/nginx/conf.d/default.conf
+      subPath: default.conf
+      readOnly: true
+  volumesNginx:
+    - name: nginx-conf
+      configMap:
+        name: pelmeshki-nginx-conf
+        items:
+          - key: default.conf
+            path: default.conf

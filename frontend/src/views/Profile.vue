@@ -44,7 +44,7 @@ export default defineComponent({
   data() {
     return {
       fullname: this.$store.getters.userFullname,
-      email: this.$store.getters.userEmail, 
+      email: this.$store.getters.userEmail,
       changingPassword: false
     }
   }
