@@ -5,7 +5,7 @@ server {
        root     /usr/share/nginx/html;
        index    index.html index.html;
        location ~ /(orders|products|categories|auth/whoami|health|metrics)  {
-           proxy_pass http://pelmeshki_pelmeshki-backshnd_1:8081;
+           proxy_pass http://pelmeshki_pelmeshki-backend_1:8081;
        }
 
        location / {

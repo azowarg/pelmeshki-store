@@ -13,5 +13,5 @@ mkdir pictures
 
 for url in "${pictures_urls[@]}"
 do
-    curl $url -o "pictures/${url#*momos/}" -s
+    curl $url -o "pictures/${url#*momos/}" 
 done

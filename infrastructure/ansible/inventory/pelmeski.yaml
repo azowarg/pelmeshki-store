@@ -3,4 +3,4 @@ pelmeshki:
     delelopment_host:
       hosts:
         development_docker_host:
-          ansible_host: 158.160.46.124
+          ansible_host: 62.84.115.226
